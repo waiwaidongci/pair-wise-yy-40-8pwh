@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from .domain import (ConflictError, DomainError, NotFoundError, PermissionDenied,
-                     ValidationError)
+                     UpstreamError, ValidationError)
 from .service import Service
 
 
@@ -65,6 +65,8 @@ def make_handler(service: Service, static_dir: str):
                 status = 403
             elif isinstance(exc, ConflictError):
                 status = 409
+            elif isinstance(exc, UpstreamError):
+                status = 502
             elif isinstance(exc, ValueError):
                 status = 422
             elif isinstance(exc, DomainError):
@@ -98,6 +100,14 @@ def make_handler(service: Service, static_dir: str):
                     actor, role = self._identity()
                     del actor
                     self._json(200, {"events": service.audit(role)})
+                elif path == "/api/report-batches":
+                    actor, role = self._identity()
+                    del actor
+                    self._json(200, {"batches": service.list_batches(role)})
+                elif path.startswith("/api/report-batches/"):
+                    batch_no = path.rsplit("/", 1)[-1]
+                    actor, role = self._identity()
+                    self._json(200, service.get_batch(batch_no, role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
@@ -119,6 +129,12 @@ def make_handler(service: Service, static_dir: str):
                     expected = body.get("expected_version")
                     self._json(200, service.transition(
                         item_id, target, expected, actor, role))
+                elif path == "/api/report-batches":
+                    self._json(201, service.create_report_batch(body, actor, role))
+                elif path == "/api/report-batches/confirm":
+                    self._json(200, service.confirm_batch(body, actor, role))
+                elif path == "/api/report-batches/retry":
+                    self._json(200, service.retry_batch(body, actor, role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:

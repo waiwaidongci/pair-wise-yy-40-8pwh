@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 class ErrorKind:
-    VALIDATION="validation"; NOT_FOUND="not_found"; FORBIDDEN="forbidden"; CONFLICT="conflict"
+    VALIDATION="validation"; NOT_FOUND="not_found"; FORBIDDEN="forbidden"; CONFLICT="conflict"; UPSTREAM="upstream"
 class DomainError(Exception):
     kind=ErrorKind.VALIDATION
     def __init__(self,message): super().__init__(message); self.message=message
@@ -10,6 +10,7 @@ class ValidationError(DomainError): kind=ErrorKind.VALIDATION
 class NotFoundError(DomainError): kind=ErrorKind.NOT_FOUND
 class PermissionDenied(DomainError): kind=ErrorKind.FORBIDDEN
 class ConflictError(DomainError): kind=ErrorKind.CONFLICT
+class UpstreamError(DomainError): kind=ErrorKind.UPSTREAM
 SEVERITIES=['low', 'medium', 'high', 'severe']; STATES=['proposed', 'assessed', 'design', 'construction', 'accepted', 'rejected']; ROLES=['assessor', 'structural_engineer', 'review_board', 'viewer']
 @dataclass(frozen=True)
 class Item:
