@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 class ErrorKind:
-    VALIDATION="validation"; NOT_FOUND="not_found"; FORBIDDEN="forbidden"; CONFLICT="conflict"
+    VALIDATION="validation"; NOT_FOUND="not_found"; FORBIDDEN="forbidden"; CONFLICT="conflict"; REPORT_FAILED="report_failed"
 class DomainError(Exception):
     kind=ErrorKind.VALIDATION
     def __init__(self,message): super().__init__(message); self.message=message
@@ -10,6 +10,11 @@ class ValidationError(DomainError): kind=ErrorKind.VALIDATION
 class NotFoundError(DomainError): kind=ErrorKind.NOT_FOUND
 class PermissionDenied(DomainError): kind=ErrorKind.FORBIDDEN
 class ConflictError(DomainError): kind=ErrorKind.CONFLICT
+class ReportFailed(ConflictError):
+    """上报监管台账失败，批次已落库为 failed，可按同一批次号重试。"""
+    kind=ErrorKind.REPORT_FAILED
+    def __init__(self,message,batch_id):
+        super().__init__(message); self.batch_id=batch_id
 SEVERITIES=['low', 'medium', 'high', 'severe']; STATES=['proposed', 'assessed', 'design', 'construction', 'accepted', 'rejected']; ROLES=['assessor', 'structural_engineer', 'review_board', 'viewer']
 @dataclass(frozen=True)
 class Item:
@@ -20,6 +25,12 @@ class Record:
 @dataclass(frozen=True)
 class AuditEntry:
     id:int; action:str; entity_type:str; entity_id:int; actor:str; detail:Dict[str,Any]; previous_hash:str; entry_hash:str; created_at:str
+@dataclass(frozen=True)
+class ReportBatch:
+    id:int; batch_no:str; status:str; created_by:str; confirmed_by:Optional[str]; receipt_no:Optional[str]; diff:list; last_error:Optional[str]; created_at:str; confirmed_at:Optional[str]
+@dataclass(frozen=True)
+class ReportBatchItem:
+    id:int; batch_id:int; item_id:int; external_ref:str; snapshot:Dict[str,Any]; local_version:int; receipt_version:Optional[int]; receipt_status:str; diff:list; stale:bool; created_at:str
 def require_text(value,field,max_length=2000):
     if not isinstance(value,str) or not value.strip(): raise ValidationError(f"{field}不能为空")
     value=value.strip()
